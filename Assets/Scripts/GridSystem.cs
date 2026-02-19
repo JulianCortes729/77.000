@@ -1,60 +1,62 @@
 using System;
 using UnityEngine;
 
+// Estados posibles de una hectáreapublic enum StateHectare
 public enum StateHectare
 {
-     INTACT,
-     ON_FIRE,
-     BURNED,
-     FIREWALL
+    Intact,   // Sin daños
+    On_Fire,  // En llamas
+    Burned,   // Quemada
+    Firewall  // Cortafuegos / barrera de fuego
 }
 
+// Gestiona la cuadrícula y los estados de cada hectárea
 public class GridSystem : MonoBehaviour
 {
+    // Almacén lineal de estados (width * height)
     private StateHectare[] hectares;
 
+    // Evento que notifica cambios: (indice, nuevoEstado)
     public event Action<int, StateHectare> OnHectareChanged;
 
-    private int width = 575; //Assuming a width 
-    private int height = 400; //Assuming a height
+    // Dimensiones de la rejilla (ajustar según mapa)
+    private int width = 575;
+    private int height = 400;
 
     void Start()
     {
+        // Inicializa el array de estados
         hectares = new StateHectare[height * width];
     }
 
+    // Convierte índice lineal a coordenadas (x, y)
     Vector2Int ExtractionCoordinates(int indice)
     {
-        //Extract the coordinates of the hectare that was clicked 
-        Vector2Int coordinates = new Vector2Int(indice % width, indice / width); //Calculate the x and y coordinates based on the index and the width of the grid
-
-        return coordinates; //vector2 with the coordinates of the hectare that was clicked on
+        Vector2Int coordinates = new Vector2Int(indice % width, indice / width);
+        return coordinates;
     }
+
+    // Convierte coordenadas (x, y) a índice lineal
     int ExtractionIndice(int x, int y)
     {
-        //Extract the index of the hectare that was clicked
-
-        int indice = x + y * width; //Calculate the index based on the x and y coordinates and the width of the grid
-
-        return indice; //index of the hectare that was clicked on
+        int indice = x + y * width;
+        return indice;
     }
 
+    // Cambia el estado usando coordenadas (x, y)
     void ChangeHectareState(StateHectare newState, int x, int y)
     {
-        //Change the state of the hectare at the given coordinates to the new state
-
-        int indice = ExtractionIndice(x, y); //Extract the index of the hectare that was clicked on and change its state to FIREWALL
-
-        ChangeHectareState(indice, newState); //Change the state of the hectare at the given index to the new state
-
-        
+        int indice = ExtractionIndice(x, y);
+        ChangeHectareState(indice, newState);
     }
 
+    // Cambia el estado por índice y dispara el evento de notificación
     public void ChangeHectareState(int indice, StateHectare newState)
     {
         hectares[indice] = newState;
-        OnHectareChanged?.Invoke(indice, newState); //Invoke the event to notify that the hectare has changed
+        OnHectareChanged?.Invoke(indice, newState);
     }
 
-
+    public int Width => width;
+    public int Height => height;
 }
