@@ -23,28 +23,28 @@ public class GridSystem : MonoBehaviour
     private int width = 575;
     private int height = 400;
 
-    void Start()
+    void Awake()
     {
         // Inicializa el array de estados
         hectares = new StateHectare[height * width];
     }
 
     // Convierte índice lineal a coordenadas (x, y)
-    Vector2Int ExtractionCoordinates(int indice)
+    public Vector2Int ExtractionCoordinates(int indice)
     {
         Vector2Int coordinates = new Vector2Int(indice % width, indice / width);
         return coordinates;
     }
 
     // Convierte coordenadas (x, y) a índice lineal
-    int ExtractionIndice(int x, int y)
+    public int ExtractionIndice(int x, int y)
     {
         int indice = x + y * width;
         return indice;
     }
 
     // Cambia el estado usando coordenadas (x, y)
-    void ChangeHectareState(StateHectare newState, int x, int y)
+    public void ChangeHectareState(StateHectare newState, int x, int y)
     {
         int indice = ExtractionIndice(x, y);
         ChangeHectareState(indice, newState);
@@ -57,6 +57,13 @@ public class GridSystem : MonoBehaviour
         OnHectareChanged?.Invoke(indice, newState);
     }
 
+    public StateHectare GetHectareState(int indice)
+    {
+        return hectares[indice];
+    }
+
     public int Width => width;
     public int Height => height;
+
+    public StateHectare[] Hectares => hectares; // Exponer el array completo si es necesario
 }
