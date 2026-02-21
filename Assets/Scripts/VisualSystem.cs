@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
+
 // Controla la visualización de la cuadrícula en un RawImage
 public class VisualSystem : MonoBehaviour
 {
@@ -28,6 +29,13 @@ public class VisualSystem : MonoBehaviour
         texture.filterMode = FilterMode.Point; // Modo punto para aspecto pixelado
 
         rawImage.texture = texture; // Asigna la textura al RawImage
+
+        Color[] basePixel = new Color[texture.width * texture.height]; // Crea un array para llenar la textura
+        Array.Fill(basePixel, colors[0]); // Llena el array con el color base (por ejemplo, para "Vacío")
+        texture.SetPixels(basePixel); // Aplica el color base a toda la textura
+        texture.Apply(); // Aplica los cambios a la GPU
+
+       
 
         gridSystem = GetComponent<GridSystem>(); // Obtiene la referencia al GridSystem adjunto
 
