@@ -24,7 +24,7 @@ public class VisualSystem : MonoBehaviour
     private void Awake()
     {
         // Inicializa la textura con las dimensiones por defecto (debe coincidir con la cuadrícula)
-        texture = new Texture2D(575, 400);
+        texture = new Texture2D(275, 200);
 
         texture.filterMode = FilterMode.Point; // Modo punto para aspecto pixelado
 
@@ -43,7 +43,10 @@ public class VisualSystem : MonoBehaviour
 
         StartCoroutine(ApplyTextureRoutine()); // Inicia la coroutine que aplica la textura al final del frame
     }
-
+    private void OnDestroy()
+    {
+        Destroy(texture); // Limpia la textura para liberar memoria cuando el objeto se destruya
+    }
     private void OnDisable()
     {
         // Evita fugas: se da de baja del evento al desactivar el componente

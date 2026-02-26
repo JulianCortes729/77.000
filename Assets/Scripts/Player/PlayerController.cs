@@ -9,6 +9,7 @@ public class PlayerController : MonoBehaviour
 
     private GridSystem gridSystem; // Referencia al sistema de cuadrícula
     private RectTransform rectTransform; // RectTransform del área interactiva
+    [SerializeField]private ResourceManager resourceManager; // Referencia al sistema de recursos para gestionar el presupuesto
 
     [SerializeField] private float zoomSpeed = 0.1f;
     [SerializeField] private float minZoom = 1f;
@@ -30,8 +31,11 @@ public class PlayerController : MonoBehaviour
     {
         if (Mouse.current.rightButton.isPressed)
         {
-            if(!GetLocalPointFromMouseClick(out Vector2 localPoint)) return; // Obtiene el punto local del clic derecho
-            DrawFirewall(localPoint); // Dibuja cortafuegos en la cuadrícula según el punto local
+            if (GetLocalPointFromMouseClick(out Vector2 localPoint))// Obtiene el punto local del clic derecho
+            {
+                DrawFirewall(localPoint); // Dibuja cortafuegos en la cuadrícula según el punto local
+            }
+            
         }
 
         
@@ -75,8 +79,10 @@ public class PlayerController : MonoBehaviour
         }
         int x = Mathf.FloorToInt(gridX); // Coordenada entera X
         int y = Mathf.FloorToInt(gridY); // Coordenada entera Y
-        gridSystem.ChangeHectareState(StateHectare.Firewall, x, y); // Aplica estado Firewall en la posición calculada
 
-        
+        if (gridSystem.GetHectareState(x, y) == StateHectare.Intact && resourceManager.TrySpendBudget())// Solo cambia si el estado es Intact
+        {
+            gridSystem.ChangeHectareState(StateHectare.Firewall, x, y); // Aplica estado Firewall en la posición calculada
+        }
     }
 }
