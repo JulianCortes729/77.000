@@ -6,7 +6,7 @@ using UnityEngine;
 public class FireManager : MonoBehaviour
 {
 
-    [SerializeField] private float tickRate = 1f; // Frecuencia de actualización del fuego en segundos
+    [SerializeField] private float tickRate = 0.1f; // Frecuencia de actualización del fuego en segundos
     [SerializeField] private GridSystem gridSystem; // Referencia al sistema de datos de la cuadrícula
     private HashSet<int> burningHectares; // Conjunto de índices de hectáreas actualmente en llamas
     private HashSet<int> proximasHectareas; // Lista temporal para almacenar las hectáreas que se encenderán en el próximo tick
@@ -15,8 +15,14 @@ public class FireManager : MonoBehaviour
     private int[] tiempoEnLlamasPorHectarea; // Array para llevar el tiempo en llamas de cada hectárea
 
     public event Action OnFireExtinguished; // Evento que se dispara cuando el fuego se extingue completamente
+    public event Action<int> OnFireManyHectares; // Evento que se dispara cuando el fuego alcanza un número crítico de hectáreas quemadas
+    public event Action<int> OnFireActiveCountChanged; // Evento que se dispara cuando cambia el número de hectáreas en llamas, pasando el nuevo conteo como parámetro
 
     public int countBurnedHectares; // Contador de hectáreas quemadas, se puede usar para estadísticas o condiciones de victoria/derrota
+    public int totalHectareas => gridSystem.Width * gridSystem.Height; // Propiedad para obtener el total de hectáreas en la cuadrícula
+
+    [SerializeField] private float fireAggressive = 0.6f;
+    [SerializeField] private int cantTicksToBurn = 2;
 
     private void Awake()
     {
@@ -47,7 +53,18 @@ public class FireManager : MonoBehaviour
             // Por ejemplo, iterar sobre las hectáreas en llamas y propagar a las adyacentes
             yield return waitForSeconds; // Espera 1 segundo entre cada tick de fuego
 
-            ProcessFireSpread();
+            for(int i = 0; i<cantTicksToBurn; i++)
+            {
+                ProcessFireSpread();
+                if (burningHectares.Count == 0)
+                {
+                    OnFireExtinguished?.Invoke(); // Dispara el evento de extinción del fuego si no quedan hectáreas en llamas
+                    break;
+                }
+            }
+            OnFireActiveCountChanged?.Invoke(burningHectares.Count); // Dispara el evento de cambio en el conteo de hectáreas en llamas, pasando el nuevo conteo como parámetro
+
+            
         }
     }
 
@@ -82,20 +99,20 @@ public class FireManager : MonoBehaviour
 
         }
 
-        if (burningHectares.Count == 0)
-        {
-            OnFireExtinguished?.Invoke(); // Dispara el evento de extinción del fuego si no quedan hectáreas en llamas
-        }
+        
+
+        
     }
 
     private bool EvaluarSiSeQuema(int currentCell)
     {
 
         tiempoEnLlamasPorHectarea[currentCell]++; // Incrementa el tiempo en llamas para la hectárea actual
-        if (tiempoEnLlamasPorHectarea[currentCell] >= 5) // Si ha estado en llamas por 5 ticks, se quema completamente
+        if (tiempoEnLlamasPorHectarea[currentCell] >= 3) // Si ha estado en llamas por 5 ticks, se quema completamente
         {
             gridSystem.ChangeHectareState(currentCell, StateHectare.Burned); // Cambia el estado a "Quemada"
             countBurnedHectares++; // Incrementa el contador de hectáreas quemadas
+            OnFireManyHectares?.Invoke(countBurnedHectares); // Dispara el evento de muchas hectáreas quemadas si se alcanza un número crítico
             return true; // Indica que la hectárea se ha quemado completamente
         }
         else
@@ -112,45 +129,82 @@ public class FireManager : MonoBehaviour
         int total = width * height;
 
 
+        bool canGoLeft = currentCell % width != 0; // Verifica si no está en el borde izquierdo
+        bool canGoRight = (currentCell + 1) % width != 0; // Verifica si no está en el borde derecho
+        bool canGoUp = currentCell + width < total; // Verifica si no está en el borde superior
+        bool canGoDown = currentCell - width >= 0; // Verifica si no está en el borde inferior
 
-
-        if (currentCell % width != 0)
-        {// Hectárea a la izquierda
+        if (canGoLeft)// Hectárea a la izquierda
+        {
             int leftIndex = currentCell - 1;
-            if (gridSystem.GetHectareState(leftIndex) == StateHectare.Intact)
+            if (gridSystem.GetHectareState(leftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
             {
                 proximasHectareas.Add(leftIndex); // Agrega la hectárea a la lista de próximas a encender
             }
         }
 
-        if ((currentCell + 1) % width != 0) // Hectárea a la derecha
+        if (canGoRight) // Hectárea a la derecha
         {
             int rightIndex = currentCell + 1;
-            if (gridSystem.GetHectareState(rightIndex) == StateHectare.Intact)
+            if (gridSystem.GetHectareState(rightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
             {
                 proximasHectareas.Add(rightIndex); // Agrega la hectárea a la lista de próximas a encender
             }
         }
 
-        if (currentCell - width >= 0) // Hectárea abajo
+        if (canGoDown) // Hectárea abajo
         {
             int downIndex = currentCell - width;
-            if (gridSystem.GetHectareState(downIndex) == StateHectare.Intact)
+            if (gridSystem.GetHectareState(downIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
             {
                 proximasHectareas.Add(downIndex); // Agrega la hectárea a la lista de próximas a encender
             }
         }
 
-        if (currentCell + width < total) // Hectárea arriba
+        if (canGoUp) // Hectárea arriba
         {
             int upIndex = currentCell + width;
-            if (gridSystem.GetHectareState(upIndex) == StateHectare.Intact)
+            if (gridSystem.GetHectareState(upIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
             {
                 proximasHectareas.Add(upIndex); // Agrega la hectárea a la lista de próximas a encender
             }
         }
 
+        if (canGoRight && canGoUp) // Hectárea arriba a la derecha
+        {
+            int upRightIndex = currentCell + width + 1;
+            if (gridSystem.GetHectareState(upRightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+            {
+                proximasHectareas.Add(upRightIndex); // Agrega la hectárea a la lista de próximas a encender
+            }
+        }
 
+        if (canGoLeft && canGoUp) // Hectárea arriba a la izquierda
+        {
+            int upLeftIndex = currentCell + width - 1;
+            if (gridSystem.GetHectareState(upLeftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+            {
+                proximasHectareas.Add(upLeftIndex); // Agrega la hectárea a la lista de próximas a encender
+            }
+        }
+
+        if (canGoRight && canGoDown) // Hectárea abajo a la derecha
+        {
+            int downRightIndex = currentCell - width + 1;
+            if (gridSystem.GetHectareState(downRightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+            {
+                proximasHectareas.Add(downRightIndex); // Agrega la hectárea a la lista de próximas a encender
+            }
+        }
+
+        if (canGoLeft && canGoDown) // Hectárea abajo a la izquierda
+        {
+            int downLeftIndex = currentCell - width - 1;
+            if (gridSystem.GetHectareState(downLeftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+            {
+                proximasHectareas.Add(downLeftIndex); // Agrega la hectárea a la lista de próximas a encender
+            }
+        }
 
     }
 

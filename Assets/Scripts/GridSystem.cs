@@ -20,8 +20,8 @@ public class GridSystem : MonoBehaviour
     public event Action<int, StateHectare> OnHectareChanged;
 
     // Dimensiones de la rejilla (ajustar según mapa)
-    private int width = 575;
-    private int height = 400;
+    private int width = 275;
+    private int height = 200;
 
     void Awake()
     {
@@ -60,6 +60,12 @@ public class GridSystem : MonoBehaviour
     public StateHectare GetHectareState(int indice)
     {
         return hectares[indice];
+    }
+
+    public StateHectare GetHectareState(int x, int y)
+    {
+        int indice = ExtractionIndice(x, y);
+        return GetHectareState(indice);
     }
 
     public int Width => width;
