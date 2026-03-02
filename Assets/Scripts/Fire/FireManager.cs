@@ -15,14 +15,15 @@ public class FireManager : MonoBehaviour
     private int[] tiempoEnLlamasPorHectarea; // Array para llevar el tiempo en llamas de cada hectárea
 
     public event Action OnFireExtinguished; // Evento que se dispara cuando el fuego se extingue completamente
-    public event Action<int> OnFireManyHectares; // Evento que se dispara cuando el fuego alcanza un número crítico de hectáreas quemadas
     public event Action<int> OnFireActiveCountChanged; // Evento que se dispara cuando cambia el número de hectáreas en llamas, pasando el nuevo conteo como parámetro
 
     public int countBurnedHectares; // Contador de hectáreas quemadas, se puede usar para estadísticas o condiciones de victoria/derrota
     public int totalHectareas => gridSystem.Width * gridSystem.Height; // Propiedad para obtener el total de hectáreas en la cuadrícula
 
     [SerializeField] private float fireAggressive = 0.6f;
-    [SerializeField] private int cantTicksToBurn = 2;
+    [SerializeField] private int cantTicksToBurn = 1;
+    private Vector2 windDirection;
+    [SerializeField] private float windForce = 0.2f;
 
     private void Awake()
     {
@@ -41,10 +42,23 @@ public class FireManager : MonoBehaviour
         tiempoEnLlamasPorHectarea = new int[gridSystem.Width * gridSystem.Height]; // Inicializa el array para el tiempo en llamas de cada hectárea
         waitForSeconds = new WaitForSeconds(tickRate); // Crea el objeto de espera con la frecuencia definida
 
-        IgniteRandomSpot(); // Enciende una hectárea aleatoria al inicio para iniciar la propagación del fuego
-
         StartCoroutine(FireTickRoutine()); // Inicia la rutina de ticks de fuego
     }
+
+    private void OnDisable()
+    {
+        GameManager.OnGameStarted -= IgniteRandomSpot; // Desuscribe del evento de inicio del juego para evitar llamadas no deseadas al método IgniteRandomSpot
+        WindSystem.OnWindChanged -= UpdateWind; // Desuscribe del evento de cambio de viento para evitar llamadas no deseadas al método UpdateWind
+    }
+
+    private void OnEnable()
+    {
+        GameManager.OnGameStarted += IgniteRandomSpot; // Suscribe al evento de inicio del juego para encender una hectárea aleatoria al comenzar
+        WindSystem.OnWindChanged += UpdateWind; // Suscribe al evento de cambio de viento para actualizar la dirección del viento cuando cambie
+    }
+
+    
+
     IEnumerator FireTickRoutine()
     {
         while (true)
@@ -64,7 +78,7 @@ public class FireManager : MonoBehaviour
             }
             OnFireActiveCountChanged?.Invoke(burningHectares.Count); // Dispara el evento de cambio en el conteo de hectáreas en llamas, pasando el nuevo conteo como parámetro
 
-            
+
         }
     }
 
@@ -108,11 +122,10 @@ public class FireManager : MonoBehaviour
     {
 
         tiempoEnLlamasPorHectarea[currentCell]++; // Incrementa el tiempo en llamas para la hectárea actual
-        if (tiempoEnLlamasPorHectarea[currentCell] >= 3) // Si ha estado en llamas por 5 ticks, se quema completamente
+        if (tiempoEnLlamasPorHectarea[currentCell] >= 2) // Si ha estado en llamas por 5 ticks, se quema completamente
         {
             gridSystem.ChangeHectareState(currentCell, StateHectare.Burned); // Cambia el estado a "Quemada"
             countBurnedHectares++; // Incrementa el contador de hectáreas quemadas
-            OnFireManyHectares?.Invoke(countBurnedHectares); // Dispara el evento de muchas hectáreas quemadas si se alcanza un número crítico
             return true; // Indica que la hectárea se ha quemado completamente
         }
         else
@@ -134,10 +147,14 @@ public class FireManager : MonoBehaviour
         bool canGoUp = currentCell + width < total; // Verifica si no está en el borde superior
         bool canGoDown = currentCell - width >= 0; // Verifica si no está en el borde inferior
 
+
+
         if (canGoLeft)// Hectárea a la izquierda
         {
             int leftIndex = currentCell - 1;
-            if (gridSystem.GetHectareState(leftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+
+            float windMultiplier = Vector2.Dot(windDirection.normalized, Vector2.left); // Calcula el multiplicador de viento para la dirección izquierda
+            if (gridSystem.GetHectareState(leftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(leftIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -146,7 +163,9 @@ public class FireManager : MonoBehaviour
         if (canGoRight) // Hectárea a la derecha
         {
             int rightIndex = currentCell + 1;
-            if (gridSystem.GetHectareState(rightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+
+            float windMultiplier = Vector2.Dot(windDirection.normalized, Vector2.right); 
+            if (gridSystem.GetHectareState(rightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(rightIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -155,7 +174,9 @@ public class FireManager : MonoBehaviour
         if (canGoDown) // Hectárea abajo
         {
             int downIndex = currentCell - width;
-            if (gridSystem.GetHectareState(downIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+
+            float windMultiplier = Vector2.Dot(windDirection.normalized, Vector2.down);
+            if (gridSystem.GetHectareState(downIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(downIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -164,7 +185,9 @@ public class FireManager : MonoBehaviour
         if (canGoUp) // Hectárea arriba
         {
             int upIndex = currentCell + width;
-            if (gridSystem.GetHectareState(upIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+
+            float windMultiplier = Vector2.Dot(windDirection.normalized, Vector2.up); 
+            if (gridSystem.GetHectareState(upIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(upIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -173,7 +196,9 @@ public class FireManager : MonoBehaviour
         if (canGoRight && canGoUp) // Hectárea arriba a la derecha
         {
             int upRightIndex = currentCell + width + 1;
-            if (gridSystem.GetHectareState(upRightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+
+            float windMultiplier = Vector2.Dot(windDirection.normalized, new Vector2(1,1).normalized); 
+            if (gridSystem.GetHectareState(upRightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(upRightIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -182,7 +207,8 @@ public class FireManager : MonoBehaviour
         if (canGoLeft && canGoUp) // Hectárea arriba a la izquierda
         {
             int upLeftIndex = currentCell + width - 1;
-            if (gridSystem.GetHectareState(upLeftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+            float windMultiplier = Vector2.Dot(windDirection.normalized, new Vector2(-1, 1).normalized); 
+            if (gridSystem.GetHectareState(upLeftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(upLeftIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -191,7 +217,8 @@ public class FireManager : MonoBehaviour
         if (canGoRight && canGoDown) // Hectárea abajo a la derecha
         {
             int downRightIndex = currentCell - width + 1;
-            if (gridSystem.GetHectareState(downRightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+            float windMultiplier = Vector2.Dot(windDirection.normalized, new Vector2(1, -1).normalized); 
+            if (gridSystem.GetHectareState(downRightIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(downRightIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -200,7 +227,8 @@ public class FireManager : MonoBehaviour
         if (canGoLeft && canGoDown) // Hectárea abajo a la izquierda
         {
             int downLeftIndex = currentCell - width - 1;
-            if (gridSystem.GetHectareState(downLeftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive)
+            float windMultiplier = Vector2.Dot(windDirection.normalized, new Vector2(-1, -1).normalized); 
+            if (gridSystem.GetHectareState(downLeftIndex) == StateHectare.Intact && UnityEngine.Random.value <= fireAggressive + (windForce * windMultiplier))
             {
                 proximasHectareas.Add(downLeftIndex); // Agrega la hectárea a la lista de próximas a encender
             }
@@ -214,4 +242,12 @@ public class FireManager : MonoBehaviour
         gridSystem.ChangeHectareState(randomIndex, StateHectare.On_Fire); // Cambia el estado de la hectárea a "En llamas"
         burningHectares.Add(randomIndex); // Agrega la hectárea a la lista de hectáreas en llamas
     }
+
+
+
+    private void UpdateWind(Vector2 vector)
+    {
+        windDirection = vector; // Actualiza la dirección del viento con el nuevo valor recibido del evento de cambio de viento
+    }
+
 }
