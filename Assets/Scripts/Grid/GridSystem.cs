@@ -21,7 +21,7 @@ public class GridSystem : MonoBehaviour
 
     // Dimensiones de la rejilla (ajustar según mapa)
     private int width = 275;
-    private int height = 200;
+    private int height = 280;
 
     void Awake()
     {

@@ -11,7 +11,7 @@ public class ResourceManager : MonoBehaviour
 
     void Awake()
     {
-        currentBudget = 5000; // Inicializa el presupuesto con un valor predeterminado
+        currentBudget = 100000; // Inicializa el presupuesto con un valor predeterminado
     }
 
     public bool TrySpendBudget()

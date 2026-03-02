@@ -24,7 +24,7 @@ public class VisualSystem : MonoBehaviour
     private void Awake()
     {
         // Inicializa la textura con las dimensiones por defecto (debe coincidir con la cuadrícula)
-        texture = new Texture2D(275, 200);
+        texture = new Texture2D(275, 280);
 
         texture.filterMode = FilterMode.Point; // Modo punto para aspecto pixelado
 
