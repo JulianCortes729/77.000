@@ -36,5 +36,4 @@ public class WindSystem : MonoBehaviour
             OnWindChanged?.Invoke(nuevaDireccion);
         }
     }
-
 }

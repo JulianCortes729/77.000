@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField]private RectTransform rectTransformCortafuegos; // RectTransform del área de cortafuegos (puede ser el mismo que rectTransform si se superponen)
     [SerializeField]private ResourceManager resourceManager; // Referencia al sistema de recursos para gestionar el presupuesto
 
-    [SerializeField] private float zoomSpeed = 0.1f;
+    [SerializeField] private float zoomSpeed = 1f;
     [SerializeField] private float minZoom = 1f;
     [SerializeField] private float maxZoom = 5f;
     private float currentZoom = 1f; // Empezamos en escala 1 (230.000 píxeles reales)
@@ -23,6 +23,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float limitX = 100f;
     [SerializeField] private float limitY = 100f;
 
+    public event Action<int,int> OnFirewallPlaced; // Evento para notificar que se ha colocado un cortafuegos (si se usan particulas o u otros managers)
 
 
     // Update is called once per frame
@@ -42,9 +43,12 @@ public class PlayerController : MonoBehaviour
         
         if (scroll != 0)
         {
-            currentZoom += scroll * zoomSpeed; // Aplica la velocidad de zoom
+            if(scroll>0) currentZoom += zoomSpeed; // Aplica la velocidad de zoom
+            if(scroll<0) currentZoom -= zoomSpeed; // Aplica la velocidad de zoom
 
             currentZoom = Mathf.Clamp(currentZoom, minZoom, maxZoom); // Limita el zoom entre los valores mínimo y máximo
+
+            currentZoom = Mathf.Round(currentZoom); 
 
             rectTransform.localScale = Vector3.one * currentZoom; // Aplica el zoom a la escala del RectTransform
         }
@@ -55,8 +59,13 @@ public class PlayerController : MonoBehaviour
 
             Vector3 newPosition = rectTransform.anchoredPosition3D + new Vector3(mouseDelta.x, mouseDelta.y, 0) * panSpeed; // Calcula la nueva posición
 
+            
+
             newPosition.x = Mathf.Clamp(newPosition.x, -limitX, limitX); // Limita la posición en X
             newPosition.y = Mathf.Clamp(newPosition.y, -limitY, limitY); // Limita la posición en Y
+
+            newPosition.x = Mathf.Round(newPosition.x); // Redondea la posición en X
+            newPosition.y = Mathf.Round(newPosition.y); // Redondea la posición en Y
 
             rectTransform.anchoredPosition3D = newPosition; // Aplica la nueva posición al RectTransform
         }
@@ -72,8 +81,6 @@ public class PlayerController : MonoBehaviour
     // Aquí traduciremos la coordenada y cambiaremos el estado
     private void DrawFirewall(Vector2 localPoint)
     {
-
-       
 
         localPoint.x += rectTransformCortafuegos.rect.width / 2; // Ajusta origen X (centro del rect)
         localPoint.y += rectTransformCortafuegos.rect.height / 2; // Ajusta origen Y (centro del rect)
@@ -94,6 +101,7 @@ public class PlayerController : MonoBehaviour
         if (gridSystem.GetHectareState(x, y) == StateHectare.Intact && resourceManager.TrySpendBudget())// Solo cambia si el estado es Intact
         {
             gridSystem.ChangeHectareState(StateHectare.Firewall, x, y); // Aplica estado Firewall en la posición calculada
+            OnFirewallPlaced?.Invoke(x, y); // Notifica que se ha colocado un cortafuegos
         }
     }
 }

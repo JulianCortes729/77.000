@@ -10,8 +10,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private FireManager fireManager;
     [SerializeField] private TextMeshProUGUI cantHectareasBurnedText;
     [SerializeField] private TextMeshProUGUI cantHectareasIntactText;
+    [SerializeField] private TextMeshProUGUI windText;
+    [SerializeField] private TextMeshProUGUI resourceText;
+    [SerializeField] private TextMeshProUGUI controlsText;
+
+
+
     public static event Action OnGameStarted; // Evento para indicar que el juego ha comenzado
-    public static event Action<int> OnGameEnded;
+    public static event Action OnGameEnded;
 
 
     private void OnEnable()
@@ -27,16 +33,26 @@ public class GameManager : MonoBehaviour
     private void HandleGameOver()
     {
         Time.timeScale = 0f; // Detiene el juego para mostrar el resultado final
+        windText.gameObject.SetActive(false); // Oculta el texto del viento
+        resourceText.gameObject.SetActive(false); // Oculta el texto de recursos
+        controlsText.gameObject.SetActive(false); // Oculta el texto de controles
+
         panelGameOver.SetActive(true); // Muestra el panel de Game Over
         cantHectareasBurnedText.text += $"{fireManager.countBurnedHectares}"; // Muestra la cantidad de hectáreas quemadas
         cantHectareasIntactText.text += $"{fireManager.totalHectareas-fireManager.countBurnedHectares}"; // Muestra la cantidad de hectáreas intactas
-        OnGameEnded?.Invoke(fireManager.countBurnedHectares); // Dispara el evento de fin del juego pasando la cantidad de hectáreas quemadas
+        OnGameEnded?.Invoke();// Dispara el evento de fin del juego para que otros componentes puedan reaccionar
     }
 
     public void RestartGame()
     {
         Time.timeScale = 1f; // Restaura el tiempo normal para reiniciar el juego
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);// Recarga la escena actual para reiniciar el juego
+    }
+
+    public void BackToMenu()
+    {
+        Time.timeScale = 1f; // Restaura el tiempo normal para reiniciar el juego
+        SceneManager.LoadScene(0); // Carga la escena del menú principal (asumiendo que es la primera escena en el build)
     }
 
     void Start()
