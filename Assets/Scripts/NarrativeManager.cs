@@ -9,21 +9,17 @@ using UnityEngine;
 [System.Serializable]
 public struct NarrativeMilestone
 {
-    public int burnedHectaresThreshold; // El número clave (ej. 20000)
     [TextArea] public string message;   // El mensaje a mostrar
+    
 }
 
 public class NarrativeManager : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI narrativeText; // Referencia al componente de texto para mostrar los mensajes en la UI
     [SerializeField] private NarrativeMilestone[] milestones; // Array de hitos narrativos
-    
+    private static List<int> shownMilestones = new List<int>(); // Array para almacenar los índices de los hitos ya mostrados
 
     
-    private void Start()
-    {
-        milestones = milestones.OrderBy(m => m.burnedHectaresThreshold).ToArray(); // Ordena los hitos por su umbral de hectáreas quemadas para facilitar la comparación
-    }
 
     private void OnDisable()
     {
@@ -35,15 +31,32 @@ public class NarrativeManager : MonoBehaviour
         GameManager.OnGameEnded += SendNarrativeMessage; // Desuscribe del evento de fin del juego para evitar llamadas no deseadas al método SendNarrativeMessage
     }   
 
-    void SendNarrativeMessage(int cantHectares)
+    void SendNarrativeMessage()
     {
-         for (int i = milestones.Length-1; i >= 0; i--)
-         {
-            if (cantHectares >= milestones[i].burnedHectaresThreshold)
+        List<int> availableIndices = new List<int>();
+
+        for (int i = 0; i<milestones.Length; i++)
+        {
+            if (!shownMilestones.Contains(i))
             {
-                narrativeText.text = milestones[i].message; // Actualiza el texto de la UI con el mensaje del hito alcanzado
-                break; // Salir del bucle después de encontrar el primer hito alcanzado (el más alto)
+                availableIndices.Add(i); // Agrega el índice del hito a la lista de índices disponibles si no ha sido mostrado previamente
             }
-         }
+        }
+
+        if (availableIndices.Count == 0)
+        {
+            narrativeText.text = ""; // Si no hay hitos disponibles, muestra un mensaje indicando que se han alcanzado todos los hitos
+            return;
+        }
+
+        int randomPos = Random.Range(0, availableIndices.Count); // Selecciona un índice aleatorio dentro del rango de hitos disponibles
+
+        int realIndice = availableIndices[randomPos]; // Obtiene el índice del hito a mostrar utilizando el índice aleatorio seleccionado
+
+        narrativeText.text = milestones[realIndice].message; // Actualiza el texto de la UI con el mensaje del hito alcanzado
+        shownMilestones.Add(realIndice);
+
+        Debug.Log("Hitos mostrados: " + shownMilestones.Count); // Imprime en la consola el índice del hito que ha sido mostrado
+        
     }
 }
