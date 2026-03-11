@@ -1,62 +1,155 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
 
-
-
 [System.Serializable]
+/// <summary>
+/// Hito narrativo que contiene el texto a mostrar.
+/// </summary>
 public struct NarrativeMilestone
 {
-    [TextArea] public string message;   // El mensaje a mostrar
-    
+    /// <summary>Texto del hito.</summary>
+    [TextArea] public string message;
 }
 
+[System.Serializable]
+/// <summary>
+/// Hito en tiempo real activado al superar un umbral de hectáreas quemadas.
+/// </summary>
+public struct RealtimeMilestone
+{
+    /// <summary>Texto del hito en tiempo real.</summary>
+    [TextArea] public string message;
+
+    /// <summary>Umbral de hectáreas quemadas para activar el hito.</summary>
+    [SerializeField] public int threshold;
+}
+
+/// <summary>
+/// Gestiona la presentación de mensajes narrativos y los hitos en tiempo real.
+/// </summary>
 public class NarrativeManager : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI narrativeText; // Referencia al componente de texto para mostrar los mensajes en la UI
-    [SerializeField] private NarrativeMilestone[] milestones; // Array de hitos narrativos
-    private static List<int> shownMilestones = new List<int>(); // Array para almacenar los índices de los hitos ya mostrados
+    private Coroutine typingCoroutine;
+    /// <summary>Componente TMP para mensajes narrativos.</summary>
+    [SerializeField] private TextMeshProUGUI narrativeText;
 
-    
+    /// <summary>Componente TMP para mensajes en tiempo real.</summary>
+    [SerializeField] private TextMeshProUGUI realtimeText;
 
-    private void OnDisable()
+    /// <summary>Hitos narrativos disponibles.</summary>
+    [SerializeField] private NarrativeMilestone[] milestones;
+
+    /// <summary>Hitos con umbrales para activación.</summary>
+    [SerializeField] private RealtimeMilestone[] realtimeMilestones;
+
+    /// <summary>Índices de hitos ya mostrados en la sesión.</summary>
+    private static List<int> shownMilestones = new List<int>();
+
+    /// <summary>Índice del siguiente hito en tiempo real a evaluar.</summary>
+    private int nextMilestoneIndex = 0;
+
+    WaitForSecondsRealtime waitForSeconds; 
+
+    public static event Action OnCharTyped;
+
+    /// <summary>
+    /// Ordena los hitos en tiempo real por su umbral al inicializar.
+    /// </summary>
+    private void Awake()
     {
-        GameManager.OnGameEnded -= SendNarrativeMessage; // Desuscribe del evento de fin del juego para evitar llamadas no deseadas al método SendNarrativeMessage
+        realtimeMilestones = realtimeMilestones.OrderBy(m => m.threshold).ToArray();
+        waitForSeconds = new WaitForSecondsRealtime(0.05f);
     }
 
+    /// <summary>
+    /// Suscribe eventos cuando el componente se activa.
+    /// </summary>
     private void OnEnable()
     {
-        GameManager.OnGameEnded += SendNarrativeMessage; // Desuscribe del evento de fin del juego para evitar llamadas no deseadas al método SendNarrativeMessage
-    }   
+        GameManager.OnGameEnded += SendNarrativeMessage;
+        FireManager.OnBurnedHectaresCountChanged += CheckRealtimeMilestones;
+    }
 
-    void SendNarrativeMessage()
+    /// <summary>
+    /// Anula suscripciones cuando el componente se desactiva.
+    /// </summary>
+    private void OnDisable()
+    {
+        GameManager.OnGameEnded -= SendNarrativeMessage;
+        FireManager.OnBurnedHectaresCountChanged -= CheckRealtimeMilestones;
+    }
+
+    /// <summary>
+    /// Verifica y muestra el siguiente hito en tiempo real si se alcanza el umbral.
+    /// </summary>
+    /// <param name="burnedCount">Conteo actual de hectáreas quemadas.</param>
+    private void CheckRealtimeMilestones(int burnedCount)
+    {
+        if (realtimeMilestones == null || realtimeMilestones.Length == 0) return;
+        if (realtimeText == null) return;
+        if (nextMilestoneIndex == realtimeMilestones.Length) return;
+
+        if (burnedCount >= realtimeMilestones[nextMilestoneIndex].threshold)
+        {
+            if (typingCoroutine != null)
+            {
+                StopCoroutine(typingCoroutine);
+            }
+
+            
+            realtimeText.text = realtimeMilestones[nextMilestoneIndex].message;
+            realtimeText.maxVisibleCharacters = 0;
+            typingCoroutine = StartCoroutine(TypewriterEffect());
+            nextMilestoneIndex++;
+        }
+    }
+
+    IEnumerator TypewriterEffect()
+    {
+        for (int i = 0; i < realtimeText.text.Length; i++)
+        {
+            realtimeText.maxVisibleCharacters = i;
+
+            if (realtimeText.text[i] != ' ')
+            {
+                OnCharTyped?.Invoke();
+            }
+            
+            yield return waitForSeconds;
+        }
+    }
+
+    /// <summary>
+    /// Muestra un mensaje narrativo aleatorio no repetido al terminar el juego.
+    /// </summary>
+    private void SendNarrativeMessage()
     {
         List<int> availableIndices = new List<int>();
 
-        for (int i = 0; i<milestones.Length; i++)
+        for (int i = 0; i < milestones.Length; i++)
         {
             if (!shownMilestones.Contains(i))
             {
-                availableIndices.Add(i); // Agrega el índice del hito a la lista de índices disponibles si no ha sido mostrado previamente
+                availableIndices.Add(i);
             }
         }
 
         if (availableIndices.Count == 0)
         {
-            narrativeText.text = ""; // Si no hay hitos disponibles, muestra un mensaje indicando que se han alcanzado todos los hitos
+            narrativeText.text = "El viento patagónico repartió las cenizas por mil kilómetros. La justicia no llegó ni a la esquina. Esa es la diferencia entre la naturaleza y el Estado.";
             return;
         }
 
-        int randomPos = Random.Range(0, availableIndices.Count); // Selecciona un índice aleatorio dentro del rango de hitos disponibles
+        int randomPos = UnityEngine.Random.Range(0, availableIndices.Count);
+        int realIndice = availableIndices[randomPos];
 
-        int realIndice = availableIndices[randomPos]; // Obtiene el índice del hito a mostrar utilizando el índice aleatorio seleccionado
-
-        narrativeText.text = milestones[realIndice].message; // Actualiza el texto de la UI con el mensaje del hito alcanzado
+        narrativeText.text = milestones[realIndice].message;
         shownMilestones.Add(realIndice);
 
-        Debug.Log("Hitos mostrados: " + shownMilestones.Count); // Imprime en la consola el índice del hito que ha sido mostrado
-        
+        Debug.Log("Hitos mostrados: " + shownMilestones.Count);
     }
 }

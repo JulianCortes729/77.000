@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI windText;
     [SerializeField] private TextMeshProUGUI resourceText;
     [SerializeField] private TextMeshProUGUI controlsText;
+    [SerializeField] private TextMeshProUGUI hectaresText;
 
 
 
@@ -36,6 +37,7 @@ public class GameManager : MonoBehaviour
         windText.gameObject.SetActive(false); // Oculta el texto del viento
         resourceText.gameObject.SetActive(false); // Oculta el texto de recursos
         controlsText.gameObject.SetActive(false); // Oculta el texto de controles
+        hectaresText.gameObject.SetActive(false); // Oculta el texto de hectáreas
 
         panelGameOver.SetActive(true); // Muestra el panel de Game Over
         cantHectareasBurnedText.text += $"{fireManager.countBurnedHectares}"; // Muestra la cantidad de hectáreas quemadas
