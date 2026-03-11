@@ -28,6 +28,7 @@ public class FireManager : MonoBehaviour
 
     public event Action OnFireExtinguished; // Evento que se dispara cuando el fuego se extingue completamente
     public event Action<int> OnFireActiveCountChanged; // Evento que se dispara cuando cambia el número de hectáreas en llamas, pasando el nuevo conteo como parámetro
+    public static event Action<int> OnBurnedHectaresCountChanged; // Evento que se dispara cuando cambia el número de hectáreas quemadas, pasando el nuevo conteo como parámetro
 
     public int countBurnedHectares; // Contador de hectáreas quemadas, se puede usar para estadísticas o condiciones de victoria/derrota
     public int totalHectareas => gridSystem.Width * gridSystem.Height; // Propiedad para obtener el total de hectáreas en la cuadrícula
@@ -100,7 +101,7 @@ public class FireManager : MonoBehaviour
 
     private void ProcessFireSpread()
     {
-
+        int prevCount = countBurnedHectares;
 
         proximasHectareas.Clear(); // Limpia la lista de próximas hectáreas a encender
 
@@ -128,9 +129,12 @@ public class FireManager : MonoBehaviour
 
         }
 
+        if (prevCount!=countBurnedHectares)
+        {
+            OnBurnedHectaresCountChanged?.Invoke(countBurnedHectares); // Dispara el evento de cambio en el conteo de hectáreas quemadas, pasando el nuevo conteo como parámetro
+        }
         
 
-        
     }
 
     private bool EvaluarSiSeQuema(int currentCell)
