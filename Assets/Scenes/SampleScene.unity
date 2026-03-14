@@ -1769,7 +1769,7 @@ MonoBehaviour:
   tickRate: 0.3
   gridSystem: {fileID: 1365076215}
   countBurnedHectares: 0
-  fireAggressive: 0.7
+  fireAggressive: 0.8
   cantTicksToBurn: 1
   windForce: 0.6
 --- !u!4 &1032409857
@@ -2952,24 +2952,20 @@ MonoBehaviour:
   - message: "1.600 ha:\nEl fuego ya consumi\xF3 una superficie igual a todo el barrio
       de Palermo."
     threshold: 1600
-  - message: "11.700 ha:\nArdi\xF3 toda la zona urbana de Rosario. Entera."
-    threshold: 11700
-  - message: "20.000 ha:\nEl fuego ya igual\xF3 la superficie de toda la Ciudad de
+  - message: "13.600 ha:\nArdi\xF3 toda la zona urbana de Rosario. Entera."
+    threshold: 13600
+  - message: "20.300 ha:\nEl fuego ya igual\xF3 la superficie de toda la Ciudad de
       Buenos Aires."
-    threshold: 20000
-  - message: '38.000 ha:
-
-      Casi el doble de la Ciudad de Buenos Aires, en cenizas.'
-    threshold: 38000
+    threshold: 20300
+  - message: "40.600 ha:\nEn cenizas: una superficie que duplica el tama\xF1o de
+      la Capital Federal."
+    threshold: 40600
   - message: "57.600 ha: \nArdi\xF3 todo el ejido municipal de la ciudad de C\xF3rdoba."
     threshold: 57600
   - message: '77.000 ha:
 
       Casi cuatro veces la Ciudad de Buenos Aires.'
     threshold: 77000
-  - message: "30.600 ha:\nDesapareci\xF3 una superficie equivalente al Gran Rosario
-      completo."
-    threshold: 30600
 --- !u!4 &1772849530
 Transform:
   m_ObjectHideFlags: 0

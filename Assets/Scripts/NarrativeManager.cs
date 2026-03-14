@@ -56,6 +56,12 @@ public class NarrativeManager : MonoBehaviour
 
     public static event Action OnCharTyped;
 
+    // Nuestra fila de espera para los mensajes
+    private Queue<string> messageQueue = new Queue<string>();
+
+    // Un candado para saber si la máquina de escribir está ocupada trabajando
+    private bool isDisplayingMessage = false;
+
     /// <summary>
     /// Ordena los hitos en tiempo real por su umbral al inicializar.
     /// </summary>
@@ -95,24 +101,47 @@ public class NarrativeManager : MonoBehaviour
 
         if (burnedCount >= realtimeMilestones[nextMilestoneIndex].threshold)
         {
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-            }
-
-            
-            realtimeText.text = realtimeMilestones[nextMilestoneIndex].message;
-            realtimeText.maxVisibleCharacters = 0;
-            typingCoroutine = StartCoroutine(TypewriterEffect());
+           
+            messageQueue.Enqueue(realtimeMilestones[nextMilestoneIndex].message);
             nextMilestoneIndex++;
+            if(!isDisplayingMessage)
+            {
+                StartCoroutine(ProcessMessageQueue());
+            }
         }
     }
 
-    IEnumerator TypewriterEffect()
+    IEnumerator ProcessMessageQueue()
     {
-        for (int i = 0; i < realtimeText.text.Length; i++)
+        isDisplayingMessage = true; // Cierra el candado
+
+        // Mientras haya mensajes en la fila de espera...
+        while (messageQueue.Count > 0)
         {
-            realtimeText.maxVisibleCharacters = i;
+            // Saca el siguiente mensaje de la fila (Dequeue)
+            string nextMessage = messageQueue.Dequeue();
+
+            // Unity permite que una corrutina pause y espere a que termine OTRA corrutina.
+            // Pásale el texto a tu efecto teletipo y espera a que termine de tipear.
+            yield return StartCoroutine(TypewriterEffect(nextMessage));
+
+            // Dale al jugador unos segundos extra para LEER el texto completo antes de mostrar el siguiente.
+            yield return new WaitForSecondsRealtime(3f);
+
+            // (Opcional) Borrar el texto de la pantalla aquí si lo deseas
+        }
+
+        isDisplayingMessage = false; // Abre el candado cuando no hay más mensajes
+    }
+
+
+    IEnumerator TypewriterEffect(string nextMessage)
+    {
+        realtimeText.text = nextMessage;
+
+        for (int i = 0; i < nextMessage.Length; i++)
+        {
+            realtimeText.maxVisibleCharacters = i + 1 ;
 
             if (realtimeText.text[i] != ' ')
             {
