@@ -7,21 +7,23 @@ public class ResourceUI : MonoBehaviour
 
     [SerializeField] private ResourceManager resourceManager; // Referencia al sistema de recursos para mostrar el presupuesto
 
-    private void Start()
+
+
+    private void OnEnable()
     {
-        presupuesto.text = $"Presupuesto: {resourceManager.GetCurrentBudget()}"; // Inicializa el texto del presupuesto con el valor actual al iniciar
+        if (resourceManager != null)
+        {
+            resourceManager.OnBudgetChanged += UpdateBudgetDisplay;
+        }
     }
 
     private void OnDisable()
     {
-        resourceManager.OnBudgetChanged -= UpdateBudgetDisplay; // Desuscribe para evitar fugas de memoria   
+        if (resourceManager != null)
+        {
+            resourceManager.OnBudgetChanged -= UpdateBudgetDisplay;
+        }
     }
-
-    private void OnEnable()
-    {
-        resourceManager.OnBudgetChanged += UpdateBudgetDisplay; // Suscribe al evento para actualizar la UI cuando cambie el presupuesto
-    }
-
     void UpdateBudgetDisplay(int newBudget)
     {
         // Aquí implementaremos la lógica para actualizar la UI con el nuevo presupuesto

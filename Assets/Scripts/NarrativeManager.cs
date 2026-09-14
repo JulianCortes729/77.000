@@ -1,167 +1,122 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 
 [System.Serializable]
-/// <summary>
-/// Hito narrativo que contiene el texto a mostrar.
-/// </summary>
 public struct NarrativeMilestone
 {
-    /// <summary>Texto del hito.</summary>
     [TextArea] public string message;
 }
 
 [System.Serializable]
-/// <summary>
-/// Hito en tiempo real activado al superar un umbral de hectáreas quemadas.
-/// </summary>
 public struct RealtimeMilestone
 {
-    /// <summary>Texto del hito en tiempo real.</summary>
     [TextArea] public string message;
-
-    /// <summary>Umbral de hectáreas quemadas para activar el hito.</summary>
-    [SerializeField] public int threshold;
+    public int threshold;
 }
 
-/// <summary>
-/// Gestiona la presentación de mensajes narrativos y los hitos en tiempo real.
-/// </summary>
 public class NarrativeManager : MonoBehaviour
 {
-    private Coroutine typingCoroutine;
-    /// <summary>Componente TMP para mensajes narrativos.</summary>
+    [Header("UI References")]
     [SerializeField] private TextMeshProUGUI narrativeText;
-
-    /// <summary>Componente TMP para mensajes en tiempo real.</summary>
     [SerializeField] private TextMeshProUGUI realtimeText;
 
-    /// <summary>Hitos narrativos disponibles.</summary>
+    [Header("Data")]
     [SerializeField] private NarrativeMilestone[] milestones;
-
-    /// <summary>Hitos con umbrales para activación.</summary>
     [SerializeField] private RealtimeMilestone[] realtimeMilestones;
-
-    /// <summary>Índices de hitos ya mostrados en la sesión.</summary>
-    private static List<int> shownMilestones = new List<int>();
-
-    /// <summary>Índice del siguiente hito en tiempo real a evaluar.</summary>
-    private int nextMilestoneIndex = 0;
-
-    WaitForSecondsRealtime waitForSeconds; 
 
     public static event Action OnCharTyped;
 
-    // Nuestra fila de espera para los mensajes
-    private Queue<string> messageQueue = new Queue<string>();
+    private static HashSet<int> _shownMilestones = new HashSet<int>(); // HashSet para búsquedas O(1)
+    private Queue<string> _messageQueue = new Queue<string>();
 
-    // Un candado para saber si la máquina de escribir está ocupada trabajando
-    private bool isDisplayingMessage = false;
+    private WaitForSecondsRealtime _typewriterDelay;
+    private WaitForSecondsRealtime _messageReadDelay;
 
-    /// <summary>
-    /// Ordena los hitos en tiempo real por su umbral al inicializar.
-    /// </summary>
+    private int _nextMilestoneIndex = 0;
+    private bool _isDisplayingMessage = false;
+
     private void Awake()
     {
-        realtimeMilestones = realtimeMilestones.OrderBy(m => m.threshold).ToArray();
-        waitForSeconds = new WaitForSecondsRealtime(0.05f);
+        // Cachear Delays evita generar basura (GC Alloc) en cada frame o letra
+        _typewriterDelay = new WaitForSecondsRealtime(0.05f);
+        _messageReadDelay = new WaitForSecondsRealtime(3f);
+
+        // Sort in-place en Awake está perfecto porque ocurre una sola vez
+        Array.Sort(realtimeMilestones, (a, b) => a.threshold.CompareTo(b.threshold));
     }
 
-    /// <summary>
-    /// Suscribe eventos cuando el componente se activa.
-    /// </summary>
     private void OnEnable()
     {
-        GameManager.OnGameEnded += SendNarrativeMessage;
+        GameManager.OnGameEnded += HandleGameEnded;
         FireManager.OnBurnedHectaresCountChanged += CheckRealtimeMilestones;
     }
 
-    /// <summary>
-    /// Anula suscripciones cuando el componente se desactiva.
-    /// </summary>
     private void OnDisable()
     {
-        GameManager.OnGameEnded -= SendNarrativeMessage;
+        GameManager.OnGameEnded -= HandleGameEnded;
         FireManager.OnBurnedHectaresCountChanged -= CheckRealtimeMilestones;
     }
 
-    /// <summary>
-    /// Verifica y muestra el siguiente hito en tiempo real si se alcanza el umbral.
-    /// </summary>
-    /// <param name="burnedCount">Conteo actual de hectáreas quemadas.</param>
     private void CheckRealtimeMilestones(int burnedCount)
     {
-        if (realtimeMilestones == null || realtimeMilestones.Length == 0) return;
-        if (realtimeText == null) return;
-        if (nextMilestoneIndex == realtimeMilestones.Length) return;
+        if (realtimeMilestones == null || realtimeText == null || _nextMilestoneIndex >= realtimeMilestones.Length)
+            return;
 
-        if (burnedCount >= realtimeMilestones[nextMilestoneIndex].threshold)
+        if (burnedCount >= realtimeMilestones[_nextMilestoneIndex].threshold)
         {
-           
-            messageQueue.Enqueue(realtimeMilestones[nextMilestoneIndex].message);
-            nextMilestoneIndex++;
-            if(!isDisplayingMessage)
+            _messageQueue.Enqueue(realtimeMilestones[_nextMilestoneIndex].message);
+            _nextMilestoneIndex++;
+
+            if (!_isDisplayingMessage)
             {
                 StartCoroutine(ProcessMessageQueue());
             }
         }
     }
 
-    IEnumerator ProcessMessageQueue()
+    private IEnumerator ProcessMessageQueue()
     {
-        isDisplayingMessage = true; // Cierra el candado
+        _isDisplayingMessage = true;
 
-        // Mientras haya mensajes en la fila de espera...
-        while (messageQueue.Count > 0)
+        while (_messageQueue.Count > 0)
         {
-            // Saca el siguiente mensaje de la fila (Dequeue)
-            string nextMessage = messageQueue.Dequeue();
-
-            // Unity permite que una corrutina pause y espere a que termine OTRA corrutina.
-            // Pásale el texto a tu efecto teletipo y espera a que termine de tipear.
+            string nextMessage = _messageQueue.Dequeue();
             yield return StartCoroutine(TypewriterEffect(nextMessage));
-
-            // Dale al jugador unos segundos extra para LEER el texto completo antes de mostrar el siguiente.
-            yield return new WaitForSecondsRealtime(3f);
-
-            // (Opcional) Borrar el texto de la pantalla aquí si lo deseas
+            yield return _messageReadDelay;
+            realtimeText.text = ""; // Opcional: borrar tras leer
         }
 
-        isDisplayingMessage = false; // Abre el candado cuando no hay más mensajes
+        _isDisplayingMessage = false;
     }
 
-
-    IEnumerator TypewriterEffect(string nextMessage)
+    private IEnumerator TypewriterEffect(string message)
     {
-        realtimeText.text = nextMessage;
+        realtimeText.text = message;
 
-        for (int i = 0; i < nextMessage.Length; i++)
+        for (int i = 0; i < message.Length; i++)
         {
-            realtimeText.maxVisibleCharacters = i + 1 ;
+            realtimeText.maxVisibleCharacters = i + 1;
 
-            if (realtimeText.text[i] != ' ')
+            if (message[i] != ' ')
             {
                 OnCharTyped?.Invoke();
             }
-            
-            yield return waitForSeconds;
+
+            yield return _typewriterDelay;
         }
     }
 
-    /// <summary>
-    /// Muestra un mensaje narrativo aleatorio no repetido al terminar el juego.
-    /// </summary>
-    private void SendNarrativeMessage()
+    // Firma modificada para coincidir con el evento nuevo
+    private void HandleGameEnded(int burned, int total)
     {
-        List<int> availableIndices = new List<int>();
+        List<int> availableIndices = new List<int>(milestones.Length);
 
         for (int i = 0; i < milestones.Length; i++)
         {
-            if (!shownMilestones.Contains(i))
+            if (!_shownMilestones.Contains(i))
             {
                 availableIndices.Add(i);
             }
@@ -177,8 +132,6 @@ public class NarrativeManager : MonoBehaviour
         int realIndice = availableIndices[randomPos];
 
         narrativeText.text = milestones[realIndice].message;
-        shownMilestones.Add(realIndice);
-
-        Debug.Log("Hitos mostrados: " + shownMilestones.Count);
+        _shownMilestones.Add(realIndice);
     }
 }

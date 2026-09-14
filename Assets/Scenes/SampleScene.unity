@@ -468,6 +468,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8800b3213c2e5ad428b6b69d7235f53f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResourceManager
+  initialBudget: 100000
+  costPerFirewall: 100
 --- !u!4 &175348227
 Transform:
   m_ObjectHideFlags: 0
@@ -1458,16 +1460,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   gridSystem: {fileID: 1365076215}
-  rectTransform: {fileID: 933302570}
-  rectTransformCortafuegos: {fileID: 1365076210}
   resourceManager: {fileID: 175348226}
+  mapRectTransform: {fileID: 933302570}
+  gridDrawArea: {fileID: 1365076210}
+  mainCamera: {fileID: 519420031}
   zoomSpeed: 1
   minZoom: 1
   maxZoom: 2
-  miCamara: {fileID: 519420031}
   panSpeed: 1
-  limitX: 200
-  limitY: 200
+  mapLimits: {x: 150, y: 181}
 --- !u!1 &974592557
 GameObject:
   m_ObjectHideFlags: 0
@@ -1766,12 +1767,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72fd5593e7e07884dac26a8f8f92861d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireManager
-  tickRate: 0.3
   gridSystem: {fileID: 1365076215}
-  countBurnedHectares: 0
+  tickRate: 0.3
   fireAggressive: 0.8
-  cantTicksToBurn: 1
   windForce: 0.6
+  cantTicksToBurn: 1
 --- !u!4 &1032409857
 Transform:
   m_ObjectHideFlags: 0
@@ -2395,7 +2395,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: aca4f4c5a7b45c946876e810e466c902, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -2430,17 +2430,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c738c69cfe74b4e408ea40c7af093dd6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VisualSystem
+  gridSystem: {fileID: 1365076215}
   rawImage: {fileID: 1365076211}
-  colors:
-  - {r: 0.05228728, g: 0.4433962, b: 0.15188648, a: 1}
-  - {r: 1, g: 0, b: 0, a: 1}
-  - {r: 0.3018868, g: 0.3018868, b: 0.3018868, a: 1}
-  - {r: 0, g: 0.26548278, b: 0.6509434, a: 1}
+  stateColors:
+  - serializedVersion: 2
+    rgba: 1900288
+  - serializedVersion: 2
+    rgba: 4278197503
+  - serializedVersion: 2
+    rgba: 4284045657
+  - serializedVersion: 2
+    rgba: 4294931456
   colorsGreen:
-  - {r: 0, g: 0.3490566, b: 0.09075471, a: 1}
-  - {r: 0, g: 0.5754717, b: 0.15023375, a: 1}
-  emberColor: {r: 1, g: 0.5180758, b: 0, a: 1}
-  emberFlashProbability: 0.1
+  - serializedVersion: 2
+    rgba: 4279082752
+  - serializedVersion: 2
+    rgba: 4279453191
 --- !u!114 &1365076215
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3095,14 +3100,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12fd7d8dec4727c41a451d3c0c42ee6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  panelGameOver: {fileID: 747268222}
   fireManager: {fileID: 1032409856}
-  cantHectareasBurnedText: {fileID: 1066055330}
-  cantHectareasIntactText: {fileID: 1741904853}
-  windText: {fileID: 2037946154}
-  resourceText: {fileID: 1287063665}
-  controlsText: {fileID: 1013420396}
-  hectaresText: {fileID: 1060924348}
 --- !u!4 &1935474228
 Transform:
   m_ObjectHideFlags: 0
@@ -3130,6 +3128,7 @@ GameObject:
   - component: {fileID: 1964861322}
   - component: {fileID: 1964861321}
   - component: {fileID: 1964861320}
+  - component: {fileID: 1964861324}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -3226,6 +3225,26 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1964861324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1964861319}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4e0669c375ebcb4d96032084d9b8b78, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameOverUIController
+  panelGameOver: {fileID: 747268222}
+  hudElements:
+  - {fileID: 1013420394}
+  - {fileID: 2037946152}
+  - {fileID: 1287063663}
+  - {fileID: 1060924345}
+  cantHectareasBurnedText: {fileID: 1066055330}
+  cantHectareasIntactText: {fileID: 1741904853}
 --- !u!1 &2037946152
 GameObject:
   m_ObjectHideFlags: 0

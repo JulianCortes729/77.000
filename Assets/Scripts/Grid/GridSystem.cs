@@ -1,75 +1,72 @@
 using System;
 using UnityEngine;
 
-// Estados posibles de una hectáreapublic enum StateHectare
-public enum StateHectare
+/// Estado posible de cada hectárea del grid. Usamos <c>byte</c> para ahorrar memoria
+/// cuando se manejan muchos elementos (77,000).
+public enum StateHectare : byte
 {
-    Intact,   // Sin daños
-    On_Fire,  // En llamas
-    Burned,   // Quemada
-    Firewall  // Cortafuegos / barrera de fuego
+    /// Hectárea sin daño.
+    Intact = 0,
+    /// Hectárea en llamas.
+    On_Fire = 1,
+    /// Hectárea ya quemada.
+    Burned = 2,
+    /// Hectárea protegida por cortafuegos.
+    Firewall = 3
 }
 
-// Gestiona la cuadrícula y los estados de cada hectárea
 public class GridSystem : MonoBehaviour
 {
-    // Almacén lineal de estados (width * height)
-    private StateHectare[] hectares;
+    // C# 12 Auto-properties
+    /// Anchura del grid en celdas.
+    public int Width { get; private set; } = 275;
 
-    // Evento que notifica cambios: (indice, nuevoEstado)
+    /// Altura del grid en celdas.
+    public int Height { get; private set; } = 280;
+
+    /// Total de celdas (Width * Height).
+    public int TotalCells => Width * Height;
+
+    /// Arreglo plano con el estado de cada hectárea.
+    private StateHectare[] _hectares;
+
+    /// Evento disparado cuando cambia el estado de una hectárea.
+    /// Parámetros: índice plano, nuevo estado.
     public event Action<int, StateHectare> OnHectareChanged;
 
-    // Dimensiones de la rejilla (ajustar según mapa)
-    private int width = 275;
-    private int height = 280;
-
-    void Awake()
+    private void Awake()
     {
-        // Inicializa el array de estados
-        hectares = new StateHectare[height * width];
+        _hectares = new StateHectare[TotalCells];
     }
 
-    // Convierte índice lineal a coordenadas (x, y)
-    public Vector2Int ExtractionCoordinates(int indice)
+    /// Calcula el índice plano a partir de coordenadas (x,y).
+    public int GetIndex(int x, int y) => x + y * Width;
+
+    /// Valida si las coordenadas están dentro del grid.
+    public bool IsValidCoordinate(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
+
+    /// Cambia el estado de la hectárea en (x,y).
+    public void ChangeHectareState(int x, int y, StateHectare newState)
     {
-        Vector2Int coordinates = new Vector2Int(indice % width, indice / width);
-        return coordinates;
+        if (!IsValidCoordinate(x, y)) return;
+        ChangeHectareState(GetIndex(x, y), newState);
     }
 
-    // Convierte coordenadas (x, y) a índice lineal
-    public int ExtractionIndice(int x, int y)
+    /// Cambia el estado de la hectárea por índice plano e invoca el evento.
+    public void ChangeHectareState(int index, StateHectare newState)
     {
-        int indice = x + y * width;
-        return indice;
+        if (_hectares[index] == newState) return; // Evitar eventos redundantes
+        _hectares[index] = newState;
+        OnHectareChanged?.Invoke(index, newState);
     }
 
-    // Cambia el estado usando coordenadas (x, y)
-    public void ChangeHectareState(StateHectare newState, int x, int y)
-    {
-        int indice = ExtractionIndice(x, y);
-        ChangeHectareState(indice, newState);
-    }
+    /// Obtiene el estado de la hectárea por índice plano.
+    public StateHectare GetHectareState(int index) => _hectares[index];
 
-    // Cambia el estado por índice y dispara el evento de notificación
-    public void ChangeHectareState(int indice, StateHectare newState)
-    {
-        hectares[indice] = newState;
-        OnHectareChanged?.Invoke(indice, newState);
-    }
+    /// Obtiene el estado de la hectárea en coordenadas (x,y).
+    public StateHectare GetHectareState(int x, int y) => _hectares[GetIndex(x, y)];
 
-    public StateHectare GetHectareState(int indice)
-    {
-        return hectares[indice];
-    }
-
-    public StateHectare GetHectareState(int x, int y)
-    {
-        int indice = ExtractionIndice(x, y);
-        return GetHectareState(indice);
-    }
-
-    public int Width => width;
-    public int Height => height;
-
-    public StateHectare[] Hectares => hectares; // Exponer el array completo si es necesario
+    /// Provee acceso de solo lectura a la memoria cruda del grid.
+    /// Útil para sistemas paralelos o envío a shaders.
+    public ReadOnlySpan<StateHectare> GetRawData() => _hectares;
 }
